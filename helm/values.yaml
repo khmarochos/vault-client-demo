@@ -73,8 +73,14 @@ hull:
     ingress:
       app:
         enabled: _HT?(index . "$").Values.ingress.enabled
-        annotations:
-          cert-manager.io/cluster-issuer: letsencrypt-production
+        annotations: |-
+          _HT!
+            {{ if (index . "$").Values.ingress.certManager.enabled -}}
+            cert-manager.io/
+            {{- (index . "$").Values.ingress.certManager.issuer.type -}}:
+            {{- " " -}}
+            {{ (index . "$").Values.ingress.certManager.issuer.name -}}
+            {{- end -}}
         rules:
           default:
             host: _HT*ingress.host
@@ -123,3 +129,8 @@ service:
 ingress:
   enabled: true
   host: "vault-client-demo.example.net"
+  certManager:
+    enabled: true
+    issuer:
+      type: "cluster-issuer"
+      name: "letsencrypt-production"
