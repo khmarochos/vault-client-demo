@@ -64,7 +64,7 @@ docker-release-job:
       - name: docker:24.0.5-dind
         command: ["--mtu=1460"]
   rules:
-    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_TAG =~ /^release-.*$/
   script:
     - until docker info; do sleep 1; done
     - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
@@ -109,7 +109,7 @@ helm-deploy-preview-job:
   stage: deploy
   image: alpine/k8s:1.27.8
   rules:
-    - if: ! $CI_COMMIT_TAG
+    - if: $CI_COMMIT_TAG !~ /^release-.*$/
   script:
     - export KUBECONFIG="${KUBECONFIG_STAGE}"
     - >-
