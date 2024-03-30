@@ -19,6 +19,10 @@ hull:
         pod:
           imagePullSecrets: _HT/secrets/util.dockerRegistryCredentials.getImagePullSecrets
           serviceAccountName: _HT/util.serviceAccount.getName
+          volumes:
+            keys:
+              persistentVolumeClaim:
+                claimName: keys
           containers:
             vault-client-demo:
               image:
@@ -36,6 +40,10 @@ hull:
                 limits:
                   cpu: 1000m
                   memory: 256Mi
+              volumeMounts:
+                keys:
+                  name: keys
+                  mountPath: /opt/vault-client-demo/keys
     secret:
       _docker_registry_credentials:
         enabled: _HT?(index . "$").Values.dockerRegistryCredentials.enabled
@@ -45,6 +53,14 @@ hull:
         data:
           .dockerconfigjson:
             inline: _HT!{{ include "util.dockerRegistryCredentials.generateDotDockerConfigJson" . | toJson }}
+    persistentvolumeclaim:
+      keys:
+        storageClassName: ceph-filesystem
+        accessModes:
+          - ReadWriteMany
+        resources:
+          requests:
+            storage: 10Mi
     service:
       app:
         enabled: _HT?(index . "$").Values.service.enabled
