@@ -11,6 +11,8 @@ variables:
   DOCKER_TLS_VERIFY: 1
   DOCKER_TLS_CERTDIR: "/certs"
   DOCKER_CERT_PATH: "${DOCKER_TLS_CERTDIR}/client"
+  # Paths
+  ARTIFACTS_DIR: "${CI_PROJECT_DIR}/artifacts"
 
 stages:
   - build
@@ -38,6 +40,23 @@ docker-build-job:
         .
     - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
 
+helm-build-job:
+  stage: build
+  image: alpine/k8s:1.27.8
+  rules:
+    - changes:
+        paths:
+          - helm/*
+  artifacts:
+    paths:
+      - "${ARTIFACTS_DIR}/*.tgz"
+  script:
+    - helm dependency update helm/
+    - helm lint helm/
+    - helm template helm/
+    - mkdir -p "${ARTIFACTS_DIR}"
+    - helm package -u -d "${ARTIFACTS_DIR}" helm/
+
 docker-release-job:
   stage: release
   image: docker:24.0.5
@@ -62,3 +81,26 @@ docker-release-job:
     - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}" "${CI_REGISTRY_IMAGE}:latest"
     - docker push --all-tags "${CI_REGISTRY_IMAGE}"
     - docker logout
+
+helm-release-job:
+  stage: release
+  image: alpine/k8s:1.27.8
+  rules:
+    - changes:
+        - helm/*
+  dependencies:
+    - helm-build-job
+  script:
+    - >-
+        export chart_version="$(
+          helm show chart "${HELM_CHART_SUBPATH}" | awk '/^version: / { print $2 }'
+        )"
+    - >-
+        helm
+        repo
+        add
+        --username gitlab-ci-token
+        --password "${CI_JOB_TOKEN}"
+        "${CI_PROJECT_NAME}"
+        "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/helm/stable"
+    - helm cm-push "${HELM_ARTIFACTS}/${CI_PROJECT_NAME}-${chart_version}.tgz" "${CI_PROJECT_NAME}"
