@@ -55,7 +55,8 @@ hull:
             inline: _HT!{{ include "util.dockerRegistryCredentials.generateDotDockerConfigJson" . | toJson }}
     persistentvolumeclaim:
       keys:
-        storageClassName: ceph-filesystem
+        enabled: _HT?(index . "$").Values.keysStorage.enabled
+        storageClassName: _HT*keysStorage.storageClassName
         accessModes:
           - ReadWriteMany
         resources:
@@ -110,6 +111,10 @@ serviceAccount:
   enabled: true
   staticName: true
   name: vault-client-demo
+
+keysStorage:
+  enabled: true
+  storageClassName: "ceph-filesystem"
 
 service:
   enabled: true
