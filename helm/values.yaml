@@ -1,0 +1,103 @@
+hull:
+  objects:
+    role:
+      default:
+        enabled: false
+    rolebinding:
+      default:
+        enabled: false
+    serviceaccount:
+      default:
+        enabled: false
+      _vault_client_demo:
+        enabled: _HT?(index . "$").Values.serviceAccount.enabled
+        staticName: _HT?(index . "$").Values.serviceAccount.name
+        metadataNameOverride: _HT/util.serviceAccount.getName
+        automountServiceAccountToken: true
+    deployment:
+      app:
+        pod:
+          imagePullSecrets: _HT/secrets/util.dockerRegistryCredentials.getImagePullSecrets
+          serviceAccountName: _HT/util.serviceAccount.getName
+          containers:
+            vault-client-demo:
+              image:
+                registry: _HT*image.registry
+                repository: _HT*image.repository
+                tag: _HT!{{ (index . "$").Values.image.tag | toJson | trimAll "\"" | quote }}
+              ports:
+                http:
+                  containerPort: 8080
+                  protocol: TCP
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 1000m
+                  memory: 256Mi
+    secret:
+      _docker_registry_credentials:
+        enabled: _HT?(index . "$").Values.dockerRegistryCredentials.enabled
+        staticName: _HT?(index . "$").Values.dockerRegistryCredentials.staticName
+        metadataNameOverride: _HT*dockerRegistryCredentials.name
+        type: kubernetes.io/dockerconfigjson
+        data:
+          .dockerconfigjson:
+            inline: _HT!{{ include "util.dockerRegistryCredentials.generateDotDockerConfigJson" . | toJson }}
+    service:
+      app:
+        enabled: _HT?(index . "$").Values.service.enabled
+        type: ClusterIP
+        ports:
+          http:
+            port: _HT*service.externalPort
+            targetPort: http
+    ingress:
+      app:
+        enabled: _HT?(index . "$").Values.ingress.enabled
+        annotations:
+          cert-manager.io/cluster-issuer: letsencrypt-production
+        rules:
+          default:
+            host: _HT*ingress.host
+            http:
+              paths:
+                root:
+                  path: /
+                  pathType: Prefix
+                  backend:
+                    service:
+                      name: app
+                      port:
+                        name: http
+        tls:
+          default:
+            hosts:
+              - _HT*ingress.host
+            secretName: tls-certificate
+image:
+  registry: registry.gitlab.tucha.ua
+  repository: khmarochos/vault-client-demo
+  tag: latest
+
+dockerRegistryCredentials:
+  enabled: false
+  staticName: false
+  name: "drc"
+  registry: "registry.gitlab.tucha.ua/khmarochos/vault-client-demo"
+  username: ""
+  password: ""
+
+serviceAccount:
+  enabled: true
+  staticName: true
+  name: vault-client-demo
+
+service:
+  enabled: true
+  externalPort: "8080"
+
+ingress:
+  enabled: true
+  host: "vault-client-demo.example.net"
