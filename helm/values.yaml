@@ -76,7 +76,7 @@ hull:
             hosts:
               - _HT![{{ (index . "$").Values.ingress.host }}]
             secretName: tls-certificate
-            
+
 image:
   registry: registry.gitlab.tucha.ua
   repository: khmarochos/vault-client-demo
