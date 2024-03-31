@@ -62,6 +62,22 @@ helm-build-job:
     - mkdir -p "${ARTIFACTS_DIR}"
     - helm package -u -d "${ARTIFACTS_DIR}" helm/
 
+docker-release-preview-job:
+  stage: release
+  image: docker:24.0.5
+  services:
+      - name: docker:24.0.5-dind
+        command: ["--mtu=1460"]
+  rules:
+    - if: $CI_COMMIT_TAG !~ /^release-.*$/
+  script:
+    - until docker info; do sleep 1; done
+    - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
+    - docker pull "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}"
+    - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_SHORT_SHA}" "${CI_REGISTRY_IMAGE}:preview"
+    - docker push --all-tags "${CI_REGISTRY_IMAGE}"
+    - docker logout
+
 docker-release-job:
   stage: release
   image: docker:24.0.5
