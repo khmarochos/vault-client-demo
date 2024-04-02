@@ -7,6 +7,7 @@ import argparse
 import base64
 import jwt
 import hvac
+import logging
 from multiprocessing import Process
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
@@ -243,6 +244,8 @@ def form_jwt(private_key: rsa.RSAPrivateKey, audience: str) -> str:
 
 if __name__ == '__main__':
 
+    logging.basicConfig(level=logging.DEBUG)
+
     configuration = get_configuration()
 
     garbage_collection(configuration['keys_dir'])
@@ -269,15 +272,20 @@ if __name__ == '__main__':
         try:
             response = requests.get(f"http://localhost:{ configuration['jwks_port'] }/jwks")
             if response.status_code == 200:
+                logging.info("JWKS endpoint is ready")
                 break
         except requests.ConnectionError:
-            time.sleep(1)
+            pass
+        logging.warning("JWKS endpoint is not ready yet")
+        time.sleep(1)
 
     # Create a JWS token here
     jwt = form_jwt(key.private, 'vault-client-demo')
+    logging.debug(f"JWT token: { jwt }")
 
     vault = Vault(configuration['vault_url'], configuration['vault_ca'])
     vault_token = vault.auth(jwt, configuration['vault_role'], configuration['vault_auth_path'])
+    logging.debug(f"Vault token: { vault_token }")
 
     secret_path_components = configuration['secret_path'].split('/')
     secret = vault.client.secrets.kv.v2.read_secret_version(
