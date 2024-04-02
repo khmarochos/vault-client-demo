@@ -23,15 +23,28 @@ hull:
             keys:
               persistentVolumeClaim:
                 claimName: keys
+            ca-bundle:
+              enabled: _HT!(index . "$").Values.vault.caBundle.pem
+              configMap:
+                name: vault-ca-bundle
           containers:
             vault-client-demo:
               image:
                 registry: _HT*image.registry
                 repository: _HT*image.repository
                 tag: _HT!{{ (index . "$").Values.image.tag | toJson | trimAll "\"" | quote }}
+              args: _HT!
+                [
+                  {{ if (index . "$").Values.vault.caBundle.pem }}
+                    "--vault-bundle {{ (index . "$").Values.vault.caBundle.mountPath }}/ca-bundle.pem",
+                  {{ end }}
+                  "--vault-url {{ (index . "$").Values.vault.url }}",
+                  "--secret-path {{ (index . "$").Values.vault.secretPath }}",
+                  "--port {{ (index . "$").Values.service.internalPort }}"
+                ]
               ports:
                 http:
-                  containerPort: 8080
+                  containerPort: _HT*service.internalPort
                   protocol: TCP
               resources:
                 requests:
@@ -43,7 +56,11 @@ hull:
               volumeMounts:
                 keys:
                   name: keys
-                  mountPath: /opt/vault-client-demo/keys
+                  mountPath: _HT*keysStorage.mountPath
+                ca-bundle:
+                  name: ca-bundle
+                  mountPath: _HT*vault.caBundle.mountPath
+                  subPath: ca-bundle.pem
     secret:
       _docker_registry_credentials:
         enabled: _HT?(index . "$").Values.dockerRegistryCredentials.enabled
@@ -53,6 +70,12 @@ hull:
         data:
           .dockerconfigjson:
             inline: _HT!{{ include "util.dockerRegistryCredentials.generateDotDockerConfigJson" . | toJson }}
+    configmap:
+      vault-ca-bundle:
+        enabled: _HT?(index . "$").Values.vault.caBundle.pem
+        data:
+          ca-bundle.pem:
+            inline: _HT!{{ toJson (index . "$").Values.vault.caBundle.pem }}
     persistentvolumeclaim:
       keys:
         enabled: _HT?(index . "$").Values.keysStorage.enabled
@@ -121,10 +144,12 @@ serviceAccount:
 keysStorage:
   enabled: true
   storageClassName: "ceph-filesystem"
+  mountPath: "/opt/vault-client-demo/keys"
 
 service:
   enabled: true
   externalPort: "8080"
+  internalPort: "8080"
 
 ingress:
   enabled: true
@@ -134,3 +159,11 @@ ingress:
     issuer:
       type: "cluster-issuer"
       name: "letsencrypt-production"
+
+vault:
+  url: "http://vault.d.kloudster.net:8200/"
+  secretPath: "kloudster/data/vault-client-demo"
+  caBundle:
+    pem: ""
+    mountPath: "/etc/vault-client-demo/etc"
+

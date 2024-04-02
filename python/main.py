@@ -3,6 +3,10 @@ import time
 
 import flask
 import argparse
+import base64
+import jwt
+import hvac
+from multiprocessing import Process
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
@@ -29,15 +33,6 @@ class Key:
         fingerprint.update(der)
         return fingerprint.finalize().hex()
 
-    def __init__(self, directory: str, key: rsa.RSAPrivateKey, size: int = 2048, save: bool = False):
-        self.private = key or self.generate(size)
-        self.public = self.get_public()
-        self.id = self.get_id()
-        self.directory = directory
-        self.file = f'{self.directory}/{self.id}.pem'
-        if save:
-            self.save()
-
     def __str__(self) -> str:
         return self.public.public_bytes(
             encoding=serialization.Encoding.PEM,
@@ -49,6 +44,44 @@ class Key:
             raise FileNotFoundError(f"Directory {self.directory} does not exist")
         with open(self.file, 'w') as file:
             file.write(self.__str__())
+
+    def __init__(
+            self,
+            key: rsa.RSAPrivateKey | rsa.RSAPublicKey | None,
+            directory: str,
+            size: int = 2048,
+            save: bool = False,
+    ):
+        if key is rsa.RSAPrivateKey:
+            self.private = key
+            self.public = self.get_public()
+        elif key is rsa.RSAPublicKey:
+            self.private = None
+            self.public = key
+        else:
+            self.private = self.generate(size)
+            self.public = self.get_public()
+        self.id = self.get_id()
+        self.directory = directory
+        self.file = f'{self.directory}/{self.id}.pem'
+        if save:
+            self.save()
+
+
+class Vault:
+
+    def __init__(self, url: str, ca_bundle: str = None):
+        self.url = url
+        self.ca_bundle = ca_bundle
+        self.client = hvac.Client(url=self.url, verify=self.ca_bundle)
+
+    def auth(self, jwt: str, role: str, path: str) -> str:
+        response = self.client.auth.jwt.jwt_login(
+            role=role,
+            path=path,
+            jwt=jwt,
+        )
+        return response['auth']['client_token']
 
 
 def get_configuration() -> dict:
@@ -63,6 +96,14 @@ def get_configuration() -> dict:
             'type': str,
             'required_argument': False,
             'required': True
+        },
+        'vault_ca': {
+            'command_line_parameter': '--vault-ca',
+            'backing_environment_variable': 'VAULT_CA',
+            'description': 'Path to CA certificate of Vault',
+            'type': str,
+            'required_argument': False,
+            'required': False
         },
         'keys_dir': {
             'command_line_parameter': '--keys-dir',
@@ -109,9 +150,6 @@ def get_configuration() -> dict:
     return configuration
 
 
-
-
-
 def garbage_collection(path: str):
     for file in os.listdir(path):
         file_path = os.path.join(path, file)
@@ -120,17 +158,88 @@ def garbage_collection(path: str):
                 os.remove(file_path)
 
 
+def form_jwks(path: str):
+
+    def int_to_base64url(value: int) -> str:
+        return \
+            base64.urlsafe_b64encode(
+                value.to_bytes(
+                    (value.bit_length() + 7) // 8,
+                    byteorder='big'
+                )
+            ) \
+                .decode('utf-8') \
+                .rstrip('=')
+
+    jwks = {
+        "keys": []
+    }
+    for file in os.listdir(path):
+        file_path = os.path.join(path, file)
+        if os.path.isfile(file_path):
+            with open(file_path, 'r') as file:
+                key_loaded = file.read()
+                key_imported = serialization.load_pem_public_key(key_loaded.encode('utf-8'), default_backend())
+                key = Key(
+                    key_imported,
+                    path,
+                    key_imported.key_size,
+                    save=False
+                )
+                jwks['keys'].append({
+                    "kty": "RSA",
+                    "use": "sig",
+                    "kid": key.get_id(),
+                    "e": int_to_base64url(key_imported.public_numbers().e),
+                    "n": int_to_base64url(key_imported.public_numbers().n),
+                    "alg": "RS256"
+                })
+    return jwks
+
+
+def form_jwt(private_key: rsa.RSAPrivateKey, audience: str) -> str:
+    current_time = time.time()
+    payload = {
+        "iat": int(current_time),
+        "exp": int(current_time) + (5 * 60),
+        "sub": "example-subject",
+        "aud": audience,
+    }
+    return jwt.encode(payload, private_key, algorithm="RS256")
+
+
 if __name__ == '__main__':
 
     configuration = get_configuration()
 
     garbage_collection(configuration['keys_dir'])
 
-    key = Key(configuration['keys_dir'], None, save=True)
-
     flask_app = flask.Flask(__name__)
-    flask_app.run(
-        debug=False,
-        host='0.0.0.0',
-        port=8080
+
+    @flask_app.route('/jwks')
+    def flask_jwks():
+        return form_jwks(configuration['keys_dir'])
+
+    key = Key(None, configuration['keys_dir'], 2048, True)
+
+    flask_process = Process(
+        target=flask_app.run,
+        kwargs={
+            'host': '0.0.0.0',
+            'port': 8080,
+            'debug': False
+        }
     )
+    flask_process.start()
+
+    # Create a JWS token here
+    jwt = form_jwt(key.private, 'vault-client-demo')
+
+    vault = Vault(configuration['vault_url'], configuration['vault_ca'])
+    vault_token = vault.auth(jwt, 'vault-client-demo', '/auth/jwt/login')
+    print(vault_token)
+
+    flask_process.terminate()
+    flask_process.join()
+    os.remove(key.file)
+
