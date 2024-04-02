@@ -279,6 +279,8 @@ if __name__ == '__main__':
 
     print(f"Wow, we've finally got something: { secret['data']['data'] }")
 
+    time.sleep(86400)
+
     flask_process.terminate()
     flask_process.join()
     os.remove(key.file)

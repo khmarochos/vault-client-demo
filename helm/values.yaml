@@ -16,6 +16,7 @@ hull:
         automountServiceAccountToken: true
     deployment:
       app:
+        replicas: 10
         pod:
           imagePullSecrets: _HT/secrets/util.dockerRegistryCredentials.getImagePullSecrets
           serviceAccountName: _HT/util.serviceAccount.getName
@@ -37,7 +38,7 @@ hull:
                 [
                   "--vault-url={{ (index . "$").Values.vault.url }}",
                   {{ if (index . "$").Values.vault.caBundle.pem }}
-                    "--vault-ca={{ (index . "$").Values.vault.caBundle.mountPath }}/ca-bundle.pem",
+                    "--vault-ca={{ (index . "$").Values.vault.caBundle.mountPath }}",
                   {{ end }}
                   "--vault-role={{ (index . "$").Values.vault.role }}",
                   "--vault-auth-path={{ (index . "$").Values.vault.authPath }}",
@@ -171,5 +172,5 @@ vault:
   secretPath: "kloudster/d/cntrl/r0/z0/k0/kloudster-backend/laravel"
   caBundle:
     pem: ""
-    mountPath: "/etc/vault-client-demo/etc"
+    mountPath: "/opt/vault-client-demo/etc/vault-ca-bundle.pem"
 
