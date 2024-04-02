@@ -119,7 +119,7 @@ def get_configuration() -> dict:
             'description': 'Size of RSA keys',
             'type': int,
             'required_argument': False,
-            'required': False
+            'required': True
         },
         'secret_path': {
             'command_line_parameter': '--secret-path',
@@ -135,7 +135,7 @@ def get_configuration() -> dict:
             'description': 'Port to listen on',
             'type': int,
             'required_argument': False,
-            'required': False
+            'required': True
         }
     }
 
