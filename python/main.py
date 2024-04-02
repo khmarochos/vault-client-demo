@@ -261,7 +261,7 @@ if __name__ == '__main__':
         raise_on_deleted_version=True,
     )
 
-    print(secret['data']['data'])
+    print(f"Wow, we've finally got something: { secret['data']['data'] }")
 
     flask_process.terminate()
     flask_process.join()
