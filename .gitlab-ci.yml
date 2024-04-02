@@ -132,7 +132,15 @@ helm-deploy-preview-job:
   rules:
     - if: $CI_COMMIT_TAG !~ /^release-.*$/
   script:
-    - export KUBECONFIG="${KUBECONFIG_PREVIEW}"
+    - mkdir -p ~/.kube
+    - export KUBECONFIG="~/.kube/config"
+    - touch "${KUBECONFIG}"
+    - kubectl config set-cluster k8s --server "${K8S_URL}"
+    - kubectl config set-credentials deployer --token "${K8S_TOKEN}"
+    - kubectl config set-context default --cluster k8s --user deployer
+    - kubectl config set-context default --namespace "${K8S_NAMESPACE}"
+    - kubectl config use-context default
+    - kubectl config set clusters.k8s.certificate-authority-data "$(base64 -w 0 "${K8S_CA_CERTIFICATE}")"
     - >-
         helm
         repo
