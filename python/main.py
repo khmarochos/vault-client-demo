@@ -218,7 +218,7 @@ def form_jwt(private_key: rsa.RSAPrivateKey, audience: str) -> str:
     payload = {
         "iat": int(current_time),
         "exp": int(current_time) + (5 * 60),
-        "sub": "example-subject",
+        "sub": "vault-client-demo",
         "aud": audience,
     }
     return jwt.encode(payload, private_key, algorithm="RS256")
@@ -252,8 +252,16 @@ if __name__ == '__main__':
     jwt = form_jwt(key.private, 'vault-client-demo')
 
     vault = Vault(configuration['vault_url'], configuration['vault_ca'])
-    vault_token = vault.auth(jwt, 'vault-client-demo', '/auth/jwt-demo/login')
-    print(vault_token)
+    vault_token = vault.auth(jwt, 'vault-client-demo', 'jwt-demo')
+
+    secret_path_components = configuration['secret_path'].split('/')
+    secret = vault.client.secrets.kv.v2.read_secret_version(
+        mount_point=secret_path_components[0],
+        path='/'.join(secret_path_components[1:]),
+        raise_on_deleted_version=True,
+    )
+
+    print(secret['data']['data'])
 
     flask_process.terminate()
     flask_process.join()

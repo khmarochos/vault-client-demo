@@ -36,10 +36,11 @@ hull:
               args: _HT!
                 [
                   {{ if (index . "$").Values.vault.caBundle.pem }}
-                    "--vault-bundle {{ (index . "$").Values.vault.caBundle.mountPath }}/ca-bundle.pem",
+                    "--vault-ca {{ (index . "$").Values.vault.caBundle.mountPath }}/ca-bundle.pem",
                   {{ end }}
                   "--vault-url {{ (index . "$").Values.vault.url }}",
-                  "--secret-path {{ (index . "$").Values.vault.secretPath }}",
+                  "--keys-size 2048",
+                  "--keys-dir {{ (index . "$").Values.keysStorage.mountPath }}",
                   "--port {{ (index . "$").Values.service.internalPort }}"
                 ]
               ports:
@@ -162,7 +163,7 @@ ingress:
 
 vault:
   url: "http://vault.d.kloudster.net:8200/"
-  secretPath: "kloudster/data/vault-client-demo"
+  secretPath: "kloudster/d/cntrl/r0/z0/k0/kloudster-backend/laravel"
   caBundle:
     pem: ""
     mountPath: "/etc/vault-client-demo/etc"
