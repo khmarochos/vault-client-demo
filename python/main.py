@@ -236,7 +236,7 @@ if __name__ == '__main__':
     jwt = form_jwt(key.private, 'vault-client-demo')
 
     vault = Vault(configuration['vault_url'], configuration['vault_ca'])
-    vault_token = vault.auth(jwt, 'vault-client-demo', '/auth/jwt/login')
+    vault_token = vault.auth(jwt, 'vault-client-demo', '/auth/jwt-demo/login')
     print(vault_token)
 
     flask_process.terminate()
