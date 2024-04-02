@@ -14,7 +14,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 class Key:
 
-    def generate(self, size: int = 2048) -> rsa.RSAPrivateKey:
+    def generate(self, size: int) -> rsa.RSAPrivateKey:
         return rsa.generate_private_key(
             public_exponent=65537,
             key_size=size,
@@ -49,7 +49,7 @@ class Key:
             self,
             key: rsa.RSAPrivateKey | rsa.RSAPublicKey | None,
             directory: str,
-            size: int = 2048,
+            size: int,
             save: bool = False,
     ):
         if key is rsa.RSAPrivateKey:
@@ -113,6 +113,14 @@ def get_configuration() -> dict:
             'required_argument': False,
             'required': True
         },
+        'keys_size': {
+            'command_line_parameter': '--keys-size',
+            'backing_environment_variable': 'KEYS_SIZE',
+            'description': 'Size of RSA keys',
+            'type': int,
+            'required_argument': False,
+            'required': False
+        },
         'secret_path': {
             'command_line_parameter': '--secret-path',
             'backing_environment_variable': 'SECRET_PATH',
@@ -121,6 +129,14 @@ def get_configuration() -> dict:
             'required_argument': False,
             'required': True
         },
+        'port': {
+            'command_line_parameter': '--port',
+            'backing_environment_variable': 'PORT',
+            'description': 'Port to listen on',
+            'type': int,
+            'required_argument': False,
+            'required': False
+        }
     }
 
     argument_parser = argparse.ArgumentParser(description='Yet another demo-application interacting with Vault.')
@@ -220,13 +236,13 @@ if __name__ == '__main__':
     def flask_jwks():
         return form_jwks(configuration['keys_dir'])
 
-    key = Key(None, configuration['keys_dir'], 2048, True)
+    key = Key(None, configuration['keys_dir'], configuration['keys_size'], True)
 
     flask_process = Process(
         target=flask_app.run,
         kwargs={
             'host': '0.0.0.0',
-            'port': 8080,
+            'port': configuration['port'],
             'debug': False
         }
     )
