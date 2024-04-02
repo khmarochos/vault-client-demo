@@ -294,7 +294,7 @@ if __name__ == '__main__':
         raise_on_deleted_version=True,
     )
 
-    print(f"Wow, we've finally got something: { secret['data']['data'] }")
+    logging.info(f"Wow, we've finally got something: { secret['data']['data'] }")
 
     time.sleep(86400)
 
