@@ -105,6 +105,22 @@ def get_configuration() -> dict:
             'required_argument': False,
             'required': False
         },
+        'vault_role': {
+            'command_line_parameter': '--vault-role',
+            'backing_environment_variable': 'VAULT_ROLE',
+            'description': 'Role to authenticate with',
+            'type': str,
+            'required_argument': False,
+            'required': True
+        },
+        'vault_auth_path': {
+            'command_line_parameter': '--vault-auth-path',
+            'backing_environment_variable': 'VAULT_AUTH_PATH',
+            'description': 'Path to authenticate with',
+            'type': str,
+            'required_argument': False,
+            'required': True
+        },
         'keys_dir': {
             'command_line_parameter': '--keys-dir',
             'backing_environment_variable': 'KEYS_DIR',
@@ -252,7 +268,7 @@ if __name__ == '__main__':
     jwt = form_jwt(key.private, 'vault-client-demo')
 
     vault = Vault(configuration['vault_url'], configuration['vault_ca'])
-    vault_token = vault.auth(jwt, 'vault-client-demo', 'jwt-demo')
+    vault_token = vault.auth(jwt, configuration['vault-role'], configuration['vault-auth-path'])
 
     secret_path_components = configuration['secret_path'].split('/')
     secret = vault.client.secrets.kv.v2.read_secret_version(

@@ -35,14 +35,16 @@ hull:
                 tag: _HT!{{ (index . "$").Values.image.tag | toJson | trimAll "\"" | quote }}
               args: _HT!
                 [
-                  "--vault-url {{ (index . "$").Values.vault.url }}",
+                  "--vault-url={{ (index . "$").Values.vault.url }}",
                   {{ if (index . "$").Values.vault.caBundle.pem }}
-                    "--vault-ca {{ (index . "$").Values.vault.caBundle.mountPath }}/ca-bundle.pem",
+                    "--vault-ca={{ (index . "$").Values.vault.caBundle.mountPath }}/ca-bundle.pem",
                   {{ end }}
-                  "--keys-size 2048",
-                  "--keys-dir {{ (index . "$").Values.keysStorage.mountPath }}",
-                  "--secret-path {{ (index . "$").Values.vault.secretPath }}",
-                  "--jwks-port {{ (index . "$").Values.service.internalPort }}"
+                  "--vault-role={{ (index . "$").Values.vault.role }}",
+                  "--vault-auth-path={{ (index . "$").Values.vault.authPath }}",
+                  "--keys-size=2048",
+                  "--keys-dir={{ (index . "$").Values.keysStorage.mountPath }}",
+                  "--jwks-port={{ (index . "$").Values.service.internalPort }}",
+                  "--secret-path={{ (index . "$").Values.vault.secretPath }}"
                 ]
               ports:
                 http:
@@ -163,7 +165,9 @@ ingress:
       name: "letsencrypt-production"
 
 vault:
-  url: "http://vault.d.kloudster.net:8200/"
+  url: "https://vault.d.kloudster.net:8200/"
+  role: "vault-client-demo"
+  authPath: "jwt-demo"
   secretPath: "kloudster/d/cntrl/r0/z0/k0/kloudster-backend/laravel"
   caBundle:
     pem: ""
