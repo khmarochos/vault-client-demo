@@ -70,6 +70,10 @@ docker-release-preview-job:
         command: ["--mtu=1460"]
   rules:
     - if: $CI_COMMIT_TAG !~ /^release-.*$/
+    - changes:
+        paths:
+          - docker/*
+          - python/*
   script:
     - until docker info; do sleep 1; done
     - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
@@ -86,6 +90,10 @@ docker-release-job:
         command: ["--mtu=1460"]
   rules:
     - if: $CI_COMMIT_TAG =~ /^release-.*$/
+    - changes:
+        paths:
+          - docker/*
+          - python/*
   script:
     - until docker info; do sleep 1; done
     - echo "${CI_REGISTRY_PASSWORD}" | docker login -u "${CI_REGISTRY_USER}" --password-stdin "${CI_REGISTRY}"
