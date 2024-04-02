@@ -2,6 +2,7 @@ import os
 import time
 
 import flask
+import requests
 import argparse
 import base64
 import jwt
@@ -263,6 +264,14 @@ if __name__ == '__main__':
         }
     )
     flask_process.start()
+
+    while True:
+        try:
+            response = requests.get(f"http://localhost:{ configuration['jwks_port'] }/jwks")
+            if response.status_code == 200:
+                break
+        except requests.ConnectionError:
+            time.sleep(1)
 
     # Create a JWS token here
     jwt = form_jwt(key.private, 'vault-client-demo')
