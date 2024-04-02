@@ -35,13 +35,14 @@ hull:
                 tag: _HT!{{ (index . "$").Values.image.tag | toJson | trimAll "\"" | quote }}
               args: _HT!
                 [
+                  "--vault-url {{ (index . "$").Values.vault.url }}",
                   {{ if (index . "$").Values.vault.caBundle.pem }}
                     "--vault-ca {{ (index . "$").Values.vault.caBundle.mountPath }}/ca-bundle.pem",
                   {{ end }}
-                  "--vault-url {{ (index . "$").Values.vault.url }}",
                   "--keys-size 2048",
                   "--keys-dir {{ (index . "$").Values.keysStorage.mountPath }}",
-                  "--port {{ (index . "$").Values.service.internalPort }}"
+                  "--secret-path {{ (index . "$").Values.vault.secretPath }}",
+                  "--jwks-port {{ (index . "$").Values.service.internalPort }}"
                 ]
               ports:
                 http:

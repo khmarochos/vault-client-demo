@@ -129,10 +129,10 @@ def get_configuration() -> dict:
             'required_argument': False,
             'required': True
         },
-        'port': {
-            'command_line_parameter': '--port',
-            'backing_environment_variable': 'PORT',
-            'description': 'Port to listen on',
+        'jwks_port': {
+            'command_line_parameter': '--jwks-port',
+            'backing_environment_variable': 'JWKS_PORT',
+            'description': 'Port to listen on for JWKS endpoint"',
             'type': int,
             'required_argument': False,
             'required': True
@@ -242,7 +242,7 @@ if __name__ == '__main__':
         target=flask_app.run,
         kwargs={
             'host': '0.0.0.0',
-            'port': configuration['port'],
+            'port': configuration['jwks_port'],
             'debug': False
         }
     )
