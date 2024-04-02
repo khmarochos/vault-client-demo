@@ -157,7 +157,7 @@ service:
 
 ingress:
   enabled: true
-  host: "vault-client-demo.example.net"
+  host: "vault-client-demo.k0.z0.r0.cntrl.d.kloudster.net"
   certManager:
     enabled: true
     issuer:
