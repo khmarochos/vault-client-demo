@@ -268,7 +268,7 @@ if __name__ == '__main__':
     jwt = form_jwt(key.private, 'vault-client-demo')
 
     vault = Vault(configuration['vault_url'], configuration['vault_ca'])
-    vault_token = vault.auth(jwt, configuration['vault-role'], configuration['vault-auth-path'])
+    vault_token = vault.auth(jwt, configuration['vault_role'], configuration['vault_auth_path'])
 
     secret_path_components = configuration['secret_path'].split('/')
     secret = vault.client.secrets.kv.v2.read_secret_version(
