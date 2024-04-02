@@ -140,7 +140,7 @@ helm-deploy-preview-job:
     - kubectl config set-context default --cluster k8s --user deployer
     - kubectl config set-context default --namespace "${K8S_NAMESPACE}"
     - kubectl config use-context default
-    - kubectl config set clusters.k8s.certificate-authority-data "$(base64 -w 0 "${K8S_CA_CERTIFICATE}")"
+    - kubectl config set clusters.k8s.certificate-authority-data "$(cat "${K8S_CA_CERTIFICATE}" | base64 -w 0)"
     - >-
         helm
         repo
